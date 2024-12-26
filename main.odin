@@ -2,9 +2,11 @@ package main
 
 import "core:fmt"
 import "core:c"
+import "core:strings"
 
 import "vendor:glfw"
 import gl "vendor:OpenGL"
+import stbi "vendor:stb/image"
 
 main :: proc () {
 	glfw.WindowHint(glfw.RESIZABLE, glfw.TRUE)
@@ -37,7 +39,7 @@ main :: proc () {
 	gl.load_up_to(3, 3, glfw.gl_set_proc_address)
 
 	// init
-	shader_program, ok := gl.load_shaders_file("vertex.glsl", "fragment.glsl")
+	shader_program, ok := gl.load_shaders_file("shaders/vertex.glsl", "shaders/fragment.glsl")
 	if !ok {
 		fmt.println("failed to load shaders")
 		return
@@ -45,10 +47,11 @@ main :: proc () {
 	gl.UseProgram(shader_program)
 
 	vertices := [?]f32{
-		0.5, 0.5, 0.0,
-		0.5, -0.5, 0.0,
-		-0.5, -0.5, 0.0,
-		-0.5, 0.5, 0.0,
+		// positions		// colors		// texture coords
+		0.5, 0.5, 0.0,      1.0, 0.0, 0.0, 	1.0, 1.0,
+		0.5, -0.5, 0.0,     0.0, 1.0, 0.0,  1.0, 0.0,
+		-0.5, -0.5, 0.0,    0.0, 0.0, 1.0,  0.0, 0.0,
+		-0.5, 0.5, 0.0,     1.0, 1.0, 0.0,  0.0, 1.0,
 	}
 
 	indices := [?]i32{
@@ -69,10 +72,18 @@ main :: proc () {
 	gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, EBO)
 	gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(indices), &indices, gl.STATIC_DRAW)
 
-	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 3 * size_of(f32), 0)
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 8 * size_of(f32), 0)
 	gl.EnableVertexAttribArray(0)
 
+	gl.VertexAttribPointer(1, 3, gl.FLOAT, gl.FALSE, 8 * size_of(f32), 3 * size_of(f32))
+	gl.EnableVertexAttribArray(1)
+
+	gl.VertexAttribPointer(2, 2, gl.FLOAT, gl.FALSE, 8 * size_of(f32), 6 * size_of(f32))
+	gl.EnableVertexAttribArray(2)
+
 	gl.BindBuffer(gl.ARRAY_BUFFER, 0)
+
+	texture := load_texture("textures/container.jpg")
 
 	for !glfw.WindowShouldClose(window) {
 		glfw.PollEvents()
@@ -84,6 +95,7 @@ main :: proc () {
 		gl.Clear(gl.COLOR_BUFFER_BIT)
 
 		gl.UseProgram(shader_program)
+		gl.BindTexture(gl.TEXTURE_2D, texture)
 		gl.BindVertexArray(VAO)
 		gl.DrawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, rawptr(uintptr(0)))
 
@@ -99,4 +111,29 @@ key_callback :: proc "c" (window: glfw.WindowHandle, key, scancode, action, mods
 
 size_callback :: proc "c" (window: glfw.WindowHandle, width, height: i32) {
 	gl.Viewport(0, 0, width, height)
+}
+
+load_texture :: proc (filename: string, wrap_s : i32 = gl.REPEAT, wrap_t : i32 = gl.REPEAT) -> u32 {
+	texture: u32
+	gl.GenTextures(1, &texture)
+	gl.BindTexture(gl.TEXTURE_2D, texture)
+
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrap_s)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrap_t)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+
+	cfilename := strings.clone_to_cstring(filename)
+	defer delete(cfilename)
+
+	img_width, img_height, num_chans: i32
+	data := stbi.load(cfilename, &img_width, &img_height, &num_chans, 0)
+	defer stbi.image_free(data)
+
+	image_format := num_chans == 4 ? gl.RGBA : gl.RGB
+
+	gl.TexImage2D(gl.TEXTURE_2D, 0, i32(image_format), img_width, img_height, 0, u32(image_format), gl.UNSIGNED_BYTE, data)
+	gl.GenerateMipmap(gl.TEXTURE_2D)
+
+	return texture
 }
