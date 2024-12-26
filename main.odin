@@ -4,6 +4,7 @@ import "core:fmt"
 import "core:c"
 import "core:strings"
 import "core:math/linalg"
+import "core:time"
 
 import "vendor:glfw"
 import gl "vendor:OpenGL"
@@ -45,6 +46,8 @@ main :: proc () {
 
 	gl.load_up_to(3, 3, glfw.gl_set_proc_address)
 
+	gl.Enable(gl.DEPTH_TEST)
+
 	// init
 	shader_program, ok := gl.load_shaders_file("shaders/vertex.glsl", "shaders/fragment.glsl")
 	if !ok {
@@ -54,39 +57,63 @@ main :: proc () {
 	gl.UseProgram(shader_program)
 
 	vertices := [?]f32{
-		// positions		// colors		// texture coords
-		0.5, 0.5, 0.0,      1.0, 0.0, 0.0, 	1.0, 1.0,
-		0.5, -0.5, 0.0,     0.0, 1.0, 0.0,  1.0, 0.0,
-		-0.5, -0.5, 0.0,    0.0, 0.0, 1.0,  0.0, 0.0,
-		-0.5, 0.5, 0.0,     1.0, 1.0, 0.0,  0.0, 1.0,
+		-0.5, -0.5, -0.5,  0.0, 0.0,
+		0.5, -0.5, -0.5,  1.0, 0.0,
+		0.5,  0.5, -0.5,  1.0, 1.0,
+		0.5,  0.5, -0.5,  1.0, 1.0,
+		-0.5,  0.5, -0.5,  0.0, 1.0,
+		-0.5, -0.5, -0.5,  0.0, 0.0,
+
+		-0.5, -0.5,  0.5,  0.0, 0.0,
+		0.5, -0.5,  0.5,  1.0, 0.0,
+		0.5,  0.5,  0.5,  1.0, 1.0,
+		0.5,  0.5,  0.5,  1.0, 1.0,
+		-0.5,  0.5,  0.5,  0.0, 1.0,
+		-0.5, -0.5,  0.5,  0.0, 0.0,
+
+		-0.5,  0.5,  0.5,  1.0, 0.0,
+		-0.5,  0.5, -0.5,  1.0, 1.0,
+		-0.5, -0.5, -0.5,  0.0, 1.0,
+		-0.5, -0.5, -0.5,  0.0, 1.0,
+		-0.5, -0.5,  0.5,  0.0, 0.0,
+		-0.5,  0.5,  0.5,  1.0, 0.0,
+
+		0.5,  0.5,  0.5,  1.0, 0.0,
+		0.5,  0.5, -0.5,  1.0, 1.0,
+		0.5, -0.5, -0.5,  0.0, 1.0,
+		0.5, -0.5, -0.5,  0.0, 1.0,
+		0.5, -0.5,  0.5,  0.0, 0.0,
+		0.5,  0.5,  0.5,  1.0, 0.0,
+
+		-0.5, -0.5, -0.5,  0.0, 1.0,
+		0.5, -0.5, -0.5,  1.0, 1.0,
+		0.5, -0.5,  0.5,  1.0, 0.0,
+		0.5, -0.5,  0.5,  1.0, 0.0,
+		-0.5, -0.5,  0.5,  0.0, 0.0,
+		-0.5, -0.5, -0.5,  0.0, 1.0,
+
+		-0.5,  0.5, -0.5,  0.0, 1.0,
+		0.5,  0.5, -0.5,  1.0, 1.0,
+		0.5,  0.5,  0.5,  1.0, 0.0,
+		0.5,  0.5,  0.5,  1.0, 0.0,
+		-0.5,  0.5,  0.5,  0.0, 0.0,
+		-0.5,  0.5, -0.5,  0.0, 1.0
 	}
 
-	indices := [?]i32{
-		0, 1, 3,
-		1, 2, 3
-	}
-
-	VBO, VAO, EBO: u32
+	VBO, VAO: u32
 	gl.GenVertexArrays(1, &VAO)
 	gl.GenBuffers(1, &VBO)
-	gl.GenBuffers(1, &EBO)
 
 	gl.BindVertexArray(VAO)
 
 	gl.BindBuffer(gl.ARRAY_BUFFER, VBO)
 	gl.BufferData(gl.ARRAY_BUFFER, size_of(vertices), &vertices, gl.STATIC_DRAW)
 
-	gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, EBO)
-	gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(indices), &indices, gl.STATIC_DRAW)
-
-	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 8 * size_of(f32), 0)
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 5 * size_of(f32), 0)
 	gl.EnableVertexAttribArray(0)
 
-	gl.VertexAttribPointer(1, 3, gl.FLOAT, gl.FALSE, 8 * size_of(f32), 3 * size_of(f32))
+	gl.VertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, 5 * size_of(f32), 3 * size_of(f32))
 	gl.EnableVertexAttribArray(1)
-
-	gl.VertexAttribPointer(2, 2, gl.FLOAT, gl.FALSE, 8 * size_of(f32), 6 * size_of(f32))
-	gl.EnableVertexAttribArray(2)
 
 	gl.BindBuffer(gl.ARRAY_BUFFER, 0)
 
@@ -99,10 +126,20 @@ main :: proc () {
 	fov_rads := linalg.to_radians(f32(45))
 	projection := linalg.matrix4_perspective(fov_rads, 800.0/ 600.0, 0.1, 100.0)
 
+	t := time.now()
 	for !glfw.WindowShouldClose(window) {
 		glfw.PollEvents()
 
+		delta_time := time.duration_seconds(time.since(t))
+		t = time.now()
+		fmt.printf("dt: %4f gt: %4f\n", delta_time, glfw.GetTime())
+
 		// update
+		// using a delta time here instead of the direct time like the examples because I'm mutating the
+		// model transformation matrix instead of applying a rotation to create a new one
+		rotate_cube := linalg.matrix4_rotate(f32(delta_time), vec3{0.5, 1.0, 0.0})
+		model = linalg.matrix_mul(model, rotate_cube)
+
 		model_loc := gl.GetUniformLocation(shader_program, "model")
 		gl.UniformMatrix4fv(model_loc, 1, gl.FALSE, &model[0][0])
 		view_loc := gl.GetUniformLocation(shader_program, "view")
@@ -112,12 +149,12 @@ main :: proc () {
 
 		// draw
 		gl.ClearColor(0.2, 0.3, 0.3, 1.0)
-		gl.Clear(gl.COLOR_BUFFER_BIT)
+		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
 		gl.UseProgram(shader_program)
 		gl.BindTexture(gl.TEXTURE_2D, texture)
 		gl.BindVertexArray(VAO)
-		gl.DrawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, rawptr(uintptr(0)))
+		gl.DrawArrays(gl.TRIANGLES, 0, 36)
 
 		glfw.SwapBuffers(window)
 	}
