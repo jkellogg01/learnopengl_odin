@@ -132,7 +132,6 @@ main :: proc () {
 
 		delta_time := time.duration_seconds(time.since(t))
 		t = time.now()
-		fmt.printf("dt: %4f gt: %4f\n", delta_time, glfw.GetTime())
 
 		// update
 		// using a delta time here instead of the direct time like the examples because I'm mutating the
