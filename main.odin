@@ -3,10 +3,17 @@ package main
 import "core:fmt"
 import "core:c"
 import "core:strings"
+import "core:math/linalg"
 
 import "vendor:glfw"
 import gl "vendor:OpenGL"
 import stbi "vendor:stb/image"
+
+vec2 :: linalg.Vector2f32
+vec3 :: linalg.Vector3f32
+vec4 :: linalg.Vector4f32
+
+mat4 :: linalg.Matrix4f32
 
 main :: proc () {
 	glfw.WindowHint(glfw.RESIZABLE, glfw.TRUE)
@@ -84,6 +91,13 @@ main :: proc () {
 	gl.BindBuffer(gl.ARRAY_BUFFER, 0)
 
 	texture := load_texture("textures/container.jpg")
+
+	rad := linalg.to_radians(f32(45))
+	rotate := linalg.matrix4_rotate(rad, vec3{ 0.0, 0.0, 1.0 })
+	scale := linalg.matrix4_scale(vec3{ 0.5, 0.5, 0.5 })
+	trans := linalg.matrix_mul(rotate, scale)
+	transform_loc := gl.GetUniformLocation(shader_program, "transform")
+	gl.UniformMatrix4fv(transform_loc, 1, gl.FALSE, &trans[0][0])
 
 	for !glfw.WindowShouldClose(window) {
 		glfw.PollEvents()
