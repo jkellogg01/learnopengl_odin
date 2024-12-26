@@ -92,16 +92,23 @@ main :: proc () {
 
 	texture := load_texture("textures/container.jpg")
 
-	translate := linalg.matrix4_translate(vec3{ 0.5, -0.5, 0.0 })
+	// coordinate system matrices
+	model_rads := linalg.to_radians(f32(-55))
+	model := linalg.matrix4_rotate(model_rads, vec3{ 1.0, 0.0, 0.0 })
+	view := linalg.matrix4_translate(vec3{ 0.0, 0.0, -3.0 })
+	fov_rads := linalg.to_radians(f32(45))
+	projection := linalg.matrix4_perspective(fov_rads, 800.0/ 600.0, 0.1, 100.0)
 
 	for !glfw.WindowShouldClose(window) {
 		glfw.PollEvents()
 
 		// update
-		rotate := linalg.matrix4_rotate(f32(glfw.GetTime()), vec3{ 0.0, 0.0, 1.0 })
-		trans := linalg.matrix_mul(translate, rotate)
-		trans_loc := gl.GetUniformLocation(shader_program, "transform")
-		gl.UniformMatrix4fv(trans_loc, 1, gl.FALSE, &trans[0][0])
+		model_loc := gl.GetUniformLocation(shader_program, "model")
+		gl.UniformMatrix4fv(model_loc, 1, gl.FALSE, &model[0][0])
+		view_loc := gl.GetUniformLocation(shader_program, "view")
+		gl.UniformMatrix4fv(view_loc, 1, gl.FALSE, &view[0][0])
+		projection_loc := gl.GetUniformLocation(shader_program, "projection")
+		gl.UniformMatrix4fv(projection_loc, 1, gl.FALSE, &projection[0][0])
 
 		// draw
 		gl.ClearColor(0.2, 0.3, 0.3, 1.0)
