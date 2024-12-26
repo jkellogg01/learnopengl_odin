@@ -92,17 +92,16 @@ main :: proc () {
 
 	texture := load_texture("textures/container.jpg")
 
-	rad := linalg.to_radians(f32(45))
-	rotate := linalg.matrix4_rotate(rad, vec3{ 0.0, 0.0, 1.0 })
-	scale := linalg.matrix4_scale(vec3{ 0.5, 0.5, 0.5 })
-	trans := linalg.matrix_mul(rotate, scale)
-	transform_loc := gl.GetUniformLocation(shader_program, "transform")
-	gl.UniformMatrix4fv(transform_loc, 1, gl.FALSE, &trans[0][0])
+	translate := linalg.matrix4_translate(vec3{ 0.5, -0.5, 0.0 })
 
 	for !glfw.WindowShouldClose(window) {
 		glfw.PollEvents()
 
 		// update
+		rotate := linalg.matrix4_rotate(f32(glfw.GetTime()), vec3{ 0.0, 0.0, 1.0 })
+		trans := linalg.matrix_mul(translate, rotate)
+		trans_loc := gl.GetUniformLocation(shader_program, "transform")
+		gl.UniformMatrix4fv(trans_loc, 1, gl.FALSE, &trans[0][0])
 
 		// draw
 		gl.ClearColor(0.2, 0.3, 0.3, 1.0)
