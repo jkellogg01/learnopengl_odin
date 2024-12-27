@@ -56,7 +56,7 @@ main :: proc () {
 	}
 	gl.UseProgram(shader_program)
 
-	vertices := [?]f32{
+	cube_vertices := [?]f32{
 		-0.5, -0.5, -0.5,  0.0, 0.0,
 		0.5, -0.5, -0.5,  1.0, 0.0,
 		0.5,  0.5, -0.5,  1.0, 1.0,
@@ -100,6 +100,19 @@ main :: proc () {
 		-0.5,  0.5, -0.5,  0.0, 1.0
 	}
 
+	cube_positions := [?]vec3{
+		vec3{ 0.0, 0.0, 0.0 }, 
+		vec3{ 2.0, 5.0, -15.0 }, 
+		vec3{ -1.5, -2.2, -2.5 },  
+		vec3{ -3.8, -2.0, -12.3 },  
+		vec3{ 2.4, -0.4, -3.5 },  
+		vec3{ -1.7, 3.0, -7.5 },  
+		vec3{ 1.3, -2.0, -2.5 },  
+		vec3{ 1.5, 2.0, -2.5 }, 
+		vec3{ 1.5, 0.2, -1.5 }, 
+		vec3{ -1.3, 1.0, -1.5 },  
+	}
+
 	VBO, VAO: u32
 	gl.GenVertexArrays(1, &VAO)
 	gl.GenBuffers(1, &VBO)
@@ -107,7 +120,7 @@ main :: proc () {
 	gl.BindVertexArray(VAO)
 
 	gl.BindBuffer(gl.ARRAY_BUFFER, VBO)
-	gl.BufferData(gl.ARRAY_BUFFER, size_of(vertices), &vertices, gl.STATIC_DRAW)
+	gl.BufferData(gl.ARRAY_BUFFER, size_of(cube_vertices), &cube_vertices, gl.STATIC_DRAW)
 
 	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 5 * size_of(f32), 0)
 	gl.EnableVertexAttribArray(0)
@@ -120,8 +133,6 @@ main :: proc () {
 	texture := load_texture("textures/container.jpg")
 
 	// coordinate system matrices
-	model_rads := linalg.to_radians(f32(-55))
-	model := linalg.matrix4_rotate(model_rads, vec3{ 1.0, 0.0, 0.0 })
 	view := linalg.matrix4_translate(vec3{ 0.0, 0.0, -3.0 })
 	fov_rads := linalg.to_radians(f32(45))
 	projection := linalg.matrix4_perspective(fov_rads, 800.0/ 600.0, 0.1, 100.0)
@@ -130,11 +141,6 @@ main :: proc () {
 		glfw.PollEvents()
 
 		// update
-		rotate_cube := linalg.matrix4_rotate(f32(glfw.GetTime()), vec3{0.5, 1.0, 0.0})
-		// this works now when it didn't before because mat4 is now the intrinsic 4d matrix type
-		cube_model := model * rotate_cube
-
-		set_uniform(shader_program, "model", &cube_model)
 		set_uniform(shader_program, "view", &view)
 		set_uniform(shader_program, "projection", &projection)
 
@@ -145,7 +151,15 @@ main :: proc () {
 		gl.UseProgram(shader_program)
 		gl.BindTexture(gl.TEXTURE_2D, texture)
 		gl.BindVertexArray(VAO)
-		gl.DrawArrays(gl.TRIANGLES, 0, 36)
+
+		for pos, idx in cube_positions {
+			model := linalg.matrix4_translate(pos)
+			angle := 20.0 * f32(idx)
+			model *= linalg.matrix4_rotate(linalg.to_radians(angle), vec3{1.0, 0.3, 0.5})
+			set_uniform(shader_program, "model", &model)
+
+			gl.DrawArrays(gl.TRIANGLES, 0, 36)
+		}
 
 		glfw.SwapBuffers(window)
 	}
