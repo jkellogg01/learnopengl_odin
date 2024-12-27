@@ -10,11 +10,11 @@ import "vendor:glfw"
 import gl "vendor:OpenGL"
 import stbi "vendor:stb/image"
 
-vec2 :: linalg.Vector2f32
-vec3 :: linalg.Vector3f32
-vec4 :: linalg.Vector4f32
+vec2 :: [2]f32
+vec3 :: [3]f32
+vec4 :: [4]f32
 
-mat4 :: linalg.Matrix4f32
+mat4 :: matrix[4, 4]f32
 
 main :: proc () {
 	glfw.WindowHint(glfw.RESIZABLE, glfw.TRUE)
@@ -126,25 +126,17 @@ main :: proc () {
 	fov_rads := linalg.to_radians(f32(45))
 	projection := linalg.matrix4_perspective(fov_rads, 800.0/ 600.0, 0.1, 100.0)
 
-	t := time.now()
 	for !glfw.WindowShouldClose(window) {
 		glfw.PollEvents()
 
-		delta_time := time.duration_seconds(time.since(t))
-		t = time.now()
-
 		// update
-		// using a delta time here instead of the direct time like the examples because I'm mutating the
-		// model transformation matrix instead of applying a rotation to create a new one
-		rotate_cube := linalg.matrix4_rotate(f32(delta_time), vec3{0.5, 1.0, 0.0})
-		model = linalg.matrix_mul(model, rotate_cube)
+		rotate_cube := linalg.matrix4_rotate(f32(glfw.GetTime()), vec3{0.5, 1.0, 0.0})
+		// this works now when it didn't before because mat4 is now the intrinsic 4d matrix type
+		cube_model := model * rotate_cube
 
-		model_loc := gl.GetUniformLocation(shader_program, "model")
-		gl.UniformMatrix4fv(model_loc, 1, gl.FALSE, &model[0][0])
-		view_loc := gl.GetUniformLocation(shader_program, "view")
-		gl.UniformMatrix4fv(view_loc, 1, gl.FALSE, &view[0][0])
-		projection_loc := gl.GetUniformLocation(shader_program, "projection")
-		gl.UniformMatrix4fv(projection_loc, 1, gl.FALSE, &projection[0][0])
+		set_uniform(shader_program, "model", &cube_model)
+		set_uniform(shader_program, "view", &view)
+		set_uniform(shader_program, "projection", &projection)
 
 		// draw
 		gl.ClearColor(0.2, 0.3, 0.3, 1.0)
