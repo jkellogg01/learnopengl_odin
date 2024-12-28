@@ -14,6 +14,8 @@ Vec4 :: [4]f32
 
 Mat4 :: matrix[4, 4]f32
 
+UP :: Vec3 { 0.0, 1.0, 0.0 }
+
 main :: proc () {
 	glfw.WindowHint(glfw.RESIZABLE, glfw.TRUE)
 	glfw.WindowHint(glfw.OPENGL_FORWARD_COMPAT, glfw.TRUE)
@@ -131,14 +133,29 @@ main :: proc () {
 	texture := load_texture("textures/container.jpg")
 
 	// coordinate system matrices
-	view := linalg.matrix4_translate(Vec3{ 0.0, 0.0, -3.0 })
 	fov_rads := linalg.to_radians(f32(45))
 	projection := linalg.matrix4_perspective(fov_rads, 800.0/ 600.0, 0.1, 100.0)
+
+	radius: f32 : 10
 
 	for !glfw.WindowShouldClose(window) {
 		glfw.PollEvents()
 
 		// update
+		time := f32(glfw.GetTime())
+		camera_x := linalg.sin(time) * radius
+		camera_z := linalg.cos(time) * radius
+		camera_position := Vec3 { camera_x, 0.0, camera_z }
+		camera_target := Vec3 { 0.0, 0.0, 0.0 }
+		camera_direction := linalg.normalize(camera_position - camera_target)
+
+		// cross product of two vectors produces a vector which is orthogonal to both components
+		// NOTE: order is important! vector cross product is not commutative. doing these in the wrong
+		// order will result in inverted camera axes
+		camera_right := linalg.normalize(linalg.cross(UP, camera_direction))
+		camera_up := linalg.cross(camera_direction, camera_right)
+		view := linalg.matrix4_look_at(camera_position, camera_target, camera_up)
+
 		set_uniform(shader_program, "view", &view)
 		set_uniform(shader_program, "projection", &projection)
 
