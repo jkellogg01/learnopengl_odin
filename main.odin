@@ -14,7 +14,9 @@ Vec4 :: [4]f32
 
 Mat4 :: matrix[4, 4]f32
 
-UP :: Vec3 { 0.0, 1.0, 0.0 }
+camera_pos := Vec3 { 0.0, 0.0, 3.0 }
+camera_front := Vec3 { 0.0, 0.0, -1.0 }
+camera_up := Vec3 { 0.0, 1.0, 0.0 }
 
 main :: proc () {
 	glfw.WindowHint(glfw.RESIZABLE, glfw.TRUE)
@@ -41,7 +43,7 @@ main :: proc () {
 
 	glfw.SwapInterval(1)
 
-	glfw.SetKeyCallback(window, key_callback)
+	// glfw.SetKeyCallback(window, key_callback)
 	glfw.SetFramebufferSizeCallback(window, size_callback)
 
 	gl.load_up_to(3, 3, glfw.gl_set_proc_address)
@@ -136,25 +138,10 @@ main :: proc () {
 	fov_rads := linalg.to_radians(f32(45))
 	projection := linalg.matrix4_perspective(fov_rads, 800.0/ 600.0, 0.1, 100.0)
 
-	radius: f32 : 10
-
 	for !glfw.WindowShouldClose(window) {
-		glfw.PollEvents()
+		process_input(window)
 
-		// update
-		time := f32(glfw.GetTime())
-		camera_x := linalg.sin(time) * radius
-		camera_z := linalg.cos(time) * radius
-		camera_position := Vec3 { camera_x, 0.0, camera_z }
-		camera_target := Vec3 { 0.0, 0.0, 0.0 }
-		camera_direction := linalg.normalize(camera_position - camera_target)
-
-		// cross product of two vectors produces a vector which is orthogonal to both components
-		// NOTE: order is important! vector cross product is not commutative. doing these in the wrong
-		// order will result in inverted camera axes
-		camera_right := linalg.normalize(linalg.cross(UP, camera_direction))
-		camera_up := linalg.cross(camera_direction, camera_right)
-		view := linalg.matrix4_look_at(camera_position, camera_target, camera_up)
+		view := linalg.matrix4_look_at(camera_pos, camera_pos + camera_front, camera_up)
 
 		set_uniform(shader_program, "view", &view)
 		set_uniform(shader_program, "projection", &projection)
@@ -177,13 +164,32 @@ main :: proc () {
 		}
 
 		glfw.SwapBuffers(window)
+		glfw.PollEvents()
 	}
 
 	// exit
 }
 
-key_callback :: proc "c" (window: glfw.WindowHandle, key, scancode, action, mods: i32) {
-	if key == glfw.KEY_ESCAPE do glfw.SetWindowShouldClose(window, true)
+process_input :: proc(window: glfw.WindowHandle) {
+	camera_speed: f32 = 0.05
+	camera_right := linalg.normalize(linalg.cross(camera_front, camera_up))
+	if get_key_down(window, glfw.KEY_ESCAPE) do glfw.SetWindowShouldClose(window, true)
+	if get_key_down(window, glfw.KEY_W) {
+		camera_pos += camera_speed * camera_front
+	}
+	if get_key_down(window, glfw.KEY_S) {
+		camera_pos -= camera_speed * camera_front
+	}
+	if get_key_down(window, glfw.KEY_A) {
+		camera_pos -= camera_speed * linalg.normalize(camera_right)
+	}
+	if get_key_down(window, glfw.KEY_D) {
+		camera_pos += camera_speed * linalg.normalize(camera_right)
+	}
+}
+
+get_key_down :: proc(window: glfw.WindowHandle, key: i32) -> bool {
+	return glfw.GetKey(window, key) == glfw.PRESS
 }
 
 size_callback :: proc "c" (window: glfw.WindowHandle, width, height: i32) {
