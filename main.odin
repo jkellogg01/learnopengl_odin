@@ -15,11 +15,19 @@ Vec4 :: [4]f32
 Mat4 :: matrix[4, 4]f32
 
 camera_pos := Vec3 { 0.0, 0.0, 3.0 }
-camera_front := Vec3 { 0.0, 0.0, -1.0 }
-camera_up := Vec3 { 0.0, 1.0, 0.0 }
+camera_direction: Vec3
+camera_up :: Vec3 { 0.0, 1.0, 0.0 }
 
 last_frame: f32 = 0
 delta_time: f32 = 0
+
+pitch: f32 = 0
+yaw: f32 = -90
+
+mouse_last_x: f32 = 400
+mouse_last_y: f32 = 300
+
+fov: f32 = 45
 
 main :: proc () {
 	glfw.WindowHint(glfw.RESIZABLE, glfw.TRUE)
@@ -44,10 +52,13 @@ main :: proc () {
 
 	glfw.MakeContextCurrent(window)
 
+	glfw.SetInputMode(window, glfw.CURSOR, glfw.CURSOR_DISABLED)
+
 	glfw.SwapInterval(1)
 
-	// glfw.SetKeyCallback(window, key_callback)
 	glfw.SetFramebufferSizeCallback(window, size_callback)
+	glfw.SetCursorPosCallback(window, mouse_callback)
+	glfw.SetScrollCallback(window, scroll_callback)
 
 	gl.load_up_to(3, 3, glfw.gl_set_proc_address)
 
@@ -137,10 +148,6 @@ main :: proc () {
 
 	texture := load_texture("textures/container.jpg")
 
-	// coordinate system matrices
-	fov_rads := linalg.to_radians(f32(45))
-	projection := linalg.matrix4_perspective(fov_rads, 800.0/ 600.0, 0.1, 100.0)
-
 	for !glfw.WindowShouldClose(window) {
 		current_frame := f32(glfw.GetTime())
 		delta_time = current_frame - last_frame
@@ -148,7 +155,19 @@ main :: proc () {
 
 		process_input(window)
 
-		view := linalg.matrix4_look_at(camera_pos, camera_pos + camera_front, camera_up)
+		yaw_rad := linalg.to_radians(yaw)
+		pitch_rad := linalg.to_radians(pitch)
+
+		camera_direction = Vec3 {
+			linalg.cos(yaw_rad) * linalg.cos(pitch_rad),
+			linalg.sin(pitch_rad),
+			linalg.sin(yaw_rad) * linalg.cos(pitch_rad),
+		}
+
+		view := linalg.matrix4_look_at(camera_pos, camera_pos + camera_direction, camera_up)
+
+		fov_rads := linalg.to_radians(fov)
+		projection := linalg.matrix4_perspective(fov_rads, 800.0/ 600.0, 0.1, 100.0)
 
 		set_uniform(shader_program, "view", &view)
 		set_uniform(shader_program, "projection", &projection)
@@ -179,19 +198,19 @@ main :: proc () {
 
 process_input :: proc(window: glfw.WindowHandle) {
 	camera_speed := 2.5 * delta_time
-	camera_right := linalg.normalize(linalg.cross(camera_front, camera_up))
+	camera_right := linalg.normalize(linalg.cross(camera_direction, camera_up))
 	if get_key_down(window, glfw.KEY_ESCAPE) do glfw.SetWindowShouldClose(window, true)
 	if get_key_down(window, glfw.KEY_W) {
-		camera_pos += camera_speed * camera_front
+		camera_pos += camera_speed * camera_direction
 	}
 	if get_key_down(window, glfw.KEY_S) {
-		camera_pos -= camera_speed * camera_front
+		camera_pos -= camera_speed * camera_direction
 	}
 	if get_key_down(window, glfw.KEY_A) {
-		camera_pos -= camera_speed * linalg.normalize(camera_right)
+		camera_pos -= camera_speed * camera_right
 	}
 	if get_key_down(window, glfw.KEY_D) {
-		camera_pos += camera_speed * linalg.normalize(camera_right)
+		camera_pos += camera_speed * camera_right
 	}
 }
 
@@ -226,4 +245,30 @@ load_texture :: proc (filename: string, wrap_s : i32 = gl.REPEAT, wrap_t : i32 =
 	gl.GenerateMipmap(gl.TEXTURE_2D)
 
 	return texture
+}
+
+mouse_callback :: proc "c" (window: glfw.WindowHandle, mouse_x, mouse_y: f64) {
+	mouse_x_offset := f32(mouse_x) - mouse_last_x
+	mouse_last_x = f32(mouse_x)
+	mouse_y_offset := mouse_last_y - f32(mouse_y)
+	mouse_last_y = f32(mouse_y)
+
+	sens: f32 : 0.1
+	mouse_x_offset *= sens
+	mouse_y_offset *= sens
+
+	yaw += mouse_x_offset
+	pitch += mouse_y_offset
+
+	if pitch > 89 {
+		pitch = 89
+	} else if pitch < -89 {
+		pitch = -89
+	}
+}
+
+scroll_callback :: proc "c" (window: glfw.WindowHandle, x_offset, y_offset: f64) {
+	fov -= f32(y_offset)
+	if fov < 1 do fov = 1
+	if fov > 120 do fov = 120
 }
