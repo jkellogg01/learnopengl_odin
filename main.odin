@@ -1,20 +1,18 @@
 package main
 
 import "core:fmt"
-import "core:c"
 import "core:strings"
 import "core:math/linalg"
-import "core:time"
 
 import "vendor:glfw"
 import gl "vendor:OpenGL"
 import stbi "vendor:stb/image"
 
-vec2 :: [2]f32
-vec3 :: [3]f32
-vec4 :: [4]f32
+Vec2 :: [2]f32
+Vec3 :: [3]f32
+Vec4 :: [4]f32
 
-mat4 :: matrix[4, 4]f32
+Mat4 :: matrix[4, 4]f32
 
 main :: proc () {
 	glfw.WindowHint(glfw.RESIZABLE, glfw.TRUE)
@@ -97,20 +95,20 @@ main :: proc () {
 		0.5,  0.5,  0.5,  1.0, 0.0,
 		0.5,  0.5,  0.5,  1.0, 0.0,
 		-0.5,  0.5,  0.5,  0.0, 0.0,
-		-0.5,  0.5, -0.5,  0.0, 1.0
+		-0.5,  0.5, -0.5,  0.0, 1.0,
 	}
 
-	cube_positions := [?]vec3{
-		vec3{ 0.0, 0.0, 0.0 }, 
-		vec3{ 2.0, 5.0, -15.0 }, 
-		vec3{ -1.5, -2.2, -2.5 },  
-		vec3{ -3.8, -2.0, -12.3 },  
-		vec3{ 2.4, -0.4, -3.5 },  
-		vec3{ -1.7, 3.0, -7.5 },  
-		vec3{ 1.3, -2.0, -2.5 },  
-		vec3{ 1.5, 2.0, -2.5 }, 
-		vec3{ 1.5, 0.2, -1.5 }, 
-		vec3{ -1.3, 1.0, -1.5 },  
+	cube_positions := [?]Vec3{
+		Vec3{ 0.0, 0.0, 0.0 }, 
+		Vec3{ 2.0, 5.0, -15.0 }, 
+		Vec3{ -1.5, -2.2, -2.5 },  
+		Vec3{ -3.8, -2.0, -12.3 },  
+		Vec3{ 2.4, -0.4, -3.5 },  
+		Vec3{ -1.7, 3.0, -7.5 },  
+		Vec3{ 1.3, -2.0, -2.5 },  
+		Vec3{ 1.5, 2.0, -2.5 }, 
+		Vec3{ 1.5, 0.2, -1.5 }, 
+		Vec3{ -1.3, 1.0, -1.5 },  
 	}
 
 	VBO, VAO: u32
@@ -133,7 +131,7 @@ main :: proc () {
 	texture := load_texture("textures/container.jpg")
 
 	// coordinate system matrices
-	view := linalg.matrix4_translate(vec3{ 0.0, 0.0, -3.0 })
+	view := linalg.matrix4_translate(Vec3{ 0.0, 0.0, -3.0 })
 	fov_rads := linalg.to_radians(f32(45))
 	projection := linalg.matrix4_perspective(fov_rads, 800.0/ 600.0, 0.1, 100.0)
 
@@ -155,7 +153,7 @@ main :: proc () {
 		for pos, idx in cube_positions {
 			model := linalg.matrix4_translate(pos)
 			angle := 20.0 * f32(idx)
-			model *= linalg.matrix4_rotate(linalg.to_radians(angle), vec3{1.0, 0.3, 0.5})
+			model *= linalg.matrix4_rotate(linalg.to_radians(angle), Vec3{1.0, 0.3, 0.5})
 			set_uniform(shader_program, "model", &model)
 
 			gl.DrawArrays(gl.TRIANGLES, 0, 36)
