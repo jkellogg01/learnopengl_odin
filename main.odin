@@ -18,6 +18,9 @@ camera_pos := Vec3 { 0.0, 0.0, 3.0 }
 camera_front := Vec3 { 0.0, 0.0, -1.0 }
 camera_up := Vec3 { 0.0, 1.0, 0.0 }
 
+last_frame: f32 = 0
+delta_time: f32 = 0
+
 main :: proc () {
 	glfw.WindowHint(glfw.RESIZABLE, glfw.TRUE)
 	glfw.WindowHint(glfw.OPENGL_FORWARD_COMPAT, glfw.TRUE)
@@ -139,6 +142,10 @@ main :: proc () {
 	projection := linalg.matrix4_perspective(fov_rads, 800.0/ 600.0, 0.1, 100.0)
 
 	for !glfw.WindowShouldClose(window) {
+		current_frame := f32(glfw.GetTime())
+		delta_time = current_frame - last_frame
+		last_frame = current_frame
+
 		process_input(window)
 
 		view := linalg.matrix4_look_at(camera_pos, camera_pos + camera_front, camera_up)
@@ -171,7 +178,7 @@ main :: proc () {
 }
 
 process_input :: proc(window: glfw.WindowHandle) {
-	camera_speed: f32 = 0.05
+	camera_speed := 2.5 * delta_time
 	camera_right := linalg.normalize(linalg.cross(camera_front, camera_up))
 	if get_key_down(window, glfw.KEY_ESCAPE) do glfw.SetWindowShouldClose(window, true)
 	if get_key_down(window, glfw.KEY_W) {
