@@ -14,23 +14,18 @@ Vec4 :: [4]f32
 
 Mat4 :: matrix[4, 4]f32
 
-camera_pos := Vec3 { 0.0, 0.0, 3.0 }
-camera_direction: Vec3
-camera_up :: Vec3 { 0.0, 1.0, 0.0 }
-
-last_frame: f32 = 0
-delta_time: f32 = 0
-
-pitch: f32 = 0
-yaw: f32 = -90
+camera := Camera {
+	position = {0, 0, 3},
+	rotation = {0, -90},
+	fov = 45,
+	sens = 0.1,
+	speed = 2.5,
+}
 
 mouse_last_x: f32 = 400
 mouse_last_y: f32 = 300
 
-fov: f32 = 45
-
 main :: proc () {
-	glfw.WindowHint(glfw.RESIZABLE, glfw.TRUE)
 	glfw.WindowHint(glfw.OPENGL_FORWARD_COMPAT, glfw.TRUE)
 	glfw.WindowHint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
 	glfw.WindowHint(glfw.CONTEXT_VERSION_MAJOR, 3)
@@ -148,27 +143,15 @@ main :: proc () {
 
 	texture := load_texture("textures/container.jpg")
 
+	last_frame: f32
 	for !glfw.WindowShouldClose(window) {
 		current_frame := f32(glfw.GetTime())
-		delta_time = current_frame - last_frame
+		process_input(window, current_frame - last_frame)
 		last_frame = current_frame
 
-		process_input(window)
 
-		yaw_rad := linalg.to_radians(yaw)
-		pitch_rad := linalg.to_radians(pitch)
-
-		camera_direction = Vec3 {
-			linalg.cos(yaw_rad) * linalg.cos(pitch_rad),
-			linalg.sin(pitch_rad),
-			linalg.sin(yaw_rad) * linalg.cos(pitch_rad),
-		}
-
-		view := linalg.matrix4_look_at(camera_pos, camera_pos + camera_direction, camera_up)
-
-		fov_rads := linalg.to_radians(fov)
-		projection := linalg.matrix4_perspective(fov_rads, 800.0/ 600.0, 0.1, 100.0)
-
+		view := camera_view(camera)
+		projection := camera_projection(camera)
 		set_uniform(shader_program, "view", &view)
 		set_uniform(shader_program, "projection", &projection)
 
@@ -196,21 +179,22 @@ main :: proc () {
 	// exit
 }
 
-process_input :: proc(window: glfw.WindowHandle) {
-	camera_speed := 2.5 * delta_time
-	camera_right := linalg.normalize(linalg.cross(camera_direction, camera_up))
+process_input :: proc(window: glfw.WindowHandle, delta_time: f32) {
+	camera_speed := camera.speed * delta_time
+	camera_forward := camera_direction(camera)
+	camera_right := linalg.normalize(linalg.cross(camera_forward, Vec3{0, 1, 0}))
 	if get_key_down(window, glfw.KEY_ESCAPE) do glfw.SetWindowShouldClose(window, true)
 	if get_key_down(window, glfw.KEY_W) {
-		camera_pos += camera_speed * camera_direction
+		camera_movement(&camera, camera_speed * camera_forward)
 	}
 	if get_key_down(window, glfw.KEY_S) {
-		camera_pos -= camera_speed * camera_direction
+		camera_movement(&camera, -camera_speed * camera_forward)
 	}
 	if get_key_down(window, glfw.KEY_A) {
-		camera_pos -= camera_speed * camera_right
+		camera_movement(&camera, -camera_speed * camera_right)
 	}
 	if get_key_down(window, glfw.KEY_D) {
-		camera_pos += camera_speed * camera_right
+		camera_movement(&camera, camera_speed * camera_right)
 	}
 }
 
@@ -253,22 +237,9 @@ mouse_callback :: proc "c" (window: glfw.WindowHandle, mouse_x, mouse_y: f64) {
 	mouse_y_offset := mouse_last_y - f32(mouse_y)
 	mouse_last_y = f32(mouse_y)
 
-	sens: f32 : 0.1
-	mouse_x_offset *= sens
-	mouse_y_offset *= sens
-
-	yaw += mouse_x_offset
-	pitch += mouse_y_offset
-
-	if pitch > 89 {
-		pitch = 89
-	} else if pitch < -89 {
-		pitch = -89
-	}
+	camera_handle_mouse(&camera, mouse_x_offset, mouse_y_offset)
 }
 
 scroll_callback :: proc "c" (window: glfw.WindowHandle, x_offset, y_offset: f64) {
-	fov -= f32(y_offset)
-	if fov < 1 do fov = 1
-	if fov > 120 do fov = 120
+	camera_handle_scroll(&camera, f32(y_offset))
 }
