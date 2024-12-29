@@ -14,16 +14,22 @@ Vec4 :: [4]f32
 
 Mat4 :: matrix[4, 4]f32
 
+window_width: i32 = 800
+window_height: i32 = 600
+
 camera := Camera {
 	position = {0, 0, 3},
 	rotation = {0, -90},
 	fov = 45,
 	sens = 0.1,
 	speed = 2.5,
+	aspect = f32(window_width) / f32(window_height),
 }
 
-mouse_last_x: f32 = 400
-mouse_last_y: f32 = 300
+mouse_last_x := f32(window_width) / 2
+mouse_last_y := f32(window_height) / 2
+
+light_position := Vec3 {1.2, 1, 2}
 
 main :: proc () {
 	glfw.WindowHint(glfw.OPENGL_FORWARD_COMPAT, glfw.TRUE)
@@ -37,7 +43,7 @@ main :: proc () {
 	}
 	defer glfw.Terminate()
 
-	window := glfw.CreateWindow(800, 600, "new glfw window", nil, nil)
+	window := glfw.CreateWindow(window_width, window_height, "new glfw window", nil, nil)
 	defer glfw.DestroyWindow(window)
 
 	if window == nil {
@@ -60,12 +66,17 @@ main :: proc () {
 	gl.Enable(gl.DEPTH_TEST)
 
 	// init
-	shader_program, ok := gl.load_shaders_file("shaders/vertex.glsl", "shaders/fragment.glsl")
-	if !ok {
-		fmt.println("failed to load shaders")
+	cube_shader, cube_shader_ok := gl.load_shaders_file("shaders/cube.vs", "shaders/cube.fs")
+	if !cube_shader_ok {
+		fmt.println("failed to load cube shaders")
 		return
 	}
-	gl.UseProgram(shader_program)
+
+	light_shader, light_shader_ok := gl.load_shaders_file("shaders/light.vs", "shaders/light.fs")
+	if !light_shader_ok {
+		fmt.println("failed to load light source shaders")
+		return
+	}
 
 	cube_vertices := [?]f32{
 		-0.5, -0.5, -0.5,  0.0, 0.0,
@@ -111,37 +122,25 @@ main :: proc () {
 		-0.5,  0.5, -0.5,  0.0, 1.0,
 	}
 
-	cube_positions := [?]Vec3{
-		Vec3{ 0.0, 0.0, 0.0 },
-		Vec3{ 2.0, 5.0, -15.0 },
-		Vec3{ -1.5, -2.2, -2.5 },
-		Vec3{ -3.8, -2.0, -12.3 },
-		Vec3{ 2.4, -0.4, -3.5 },
-		Vec3{ -1.7, 3.0, -7.5 },
-		Vec3{ 1.3, -2.0, -2.5 },
-		Vec3{ 1.5, 2.0, -2.5 },
-		Vec3{ 1.5, 0.2, -1.5 },
-		Vec3{ -1.3, 1.0, -1.5 },
-	}
-
-	VBO, VAO: u32
-	gl.GenVertexArrays(1, &VAO)
+	VBO, cube_VAO, light_VAO: u32
+	gl.GenVertexArrays(1, &cube_VAO)
+	gl.GenVertexArrays(1, &light_VAO)
 	gl.GenBuffers(1, &VBO)
-
-	gl.BindVertexArray(VAO)
 
 	gl.BindBuffer(gl.ARRAY_BUFFER, VBO)
 	gl.BufferData(gl.ARRAY_BUFFER, size_of(cube_vertices), &cube_vertices, gl.STATIC_DRAW)
 
+	gl.BindVertexArray(cube_VAO)
+
 	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 5 * size_of(f32), 0)
 	gl.EnableVertexAttribArray(0)
 
-	gl.VertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, 5 * size_of(f32), 3 * size_of(f32))
-	gl.EnableVertexAttribArray(1)
+	gl.BindVertexArray(light_VAO)
+
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 5 * size_of(f32), 0)
+	gl.EnableVertexAttribArray(0)
 
 	gl.BindBuffer(gl.ARRAY_BUFFER, 0)
-
-	texture := load_texture("textures/container.jpg")
 
 	last_frame: f32
 	for !glfw.WindowShouldClose(window) {
@@ -149,28 +148,34 @@ main :: proc () {
 		process_input(window, current_frame - last_frame)
 		last_frame = current_frame
 
-
 		view := camera_view(camera)
 		projection := camera_projection(camera)
-		set_uniform(shader_program, "view", &view)
-		set_uniform(shader_program, "projection", &projection)
+
+		cube_model := linalg.matrix4_translate(Vec3{0, 0, 0})
+
+		light_model := linalg.matrix4_translate(light_position)
+		light_model *= linalg.matrix4_scale(Vec3 {0.2, 0.2, 0.2})
 
 		// draw
 		gl.ClearColor(0.2, 0.3, 0.3, 1.0)
 		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
-		gl.UseProgram(shader_program)
-		gl.BindTexture(gl.TEXTURE_2D, texture)
-		gl.BindVertexArray(VAO)
+		// IMPORTANT: a shader must be active to set its uniform values!
+		gl.UseProgram(cube_shader)
+		set_uniform(cube_shader, "view", &view)
+		set_uniform(cube_shader, "projection", &projection)
+		set_uniform(cube_shader, "model", &cube_model)
+		set_uniform(cube_shader, "object_color", Vec3{1, 0.5, 0.31})
+		set_uniform(cube_shader, "light_color", Vec3{1, 1, 1})
+		gl.BindVertexArray(cube_VAO)
+		gl.DrawArrays(gl.TRIANGLES, 0, 36)
 
-		for pos, idx in cube_positions {
-			model := linalg.matrix4_translate(pos)
-			angle := 20.0 * f32(idx)
-			model *= linalg.matrix4_rotate(linalg.to_radians(angle), Vec3{1.0, 0.3, 0.5})
-			set_uniform(shader_program, "model", &model)
-
-			gl.DrawArrays(gl.TRIANGLES, 0, 36)
-		}
+		gl.UseProgram(light_shader)
+		set_uniform(light_shader, "view", &view)
+		set_uniform(light_shader, "projection", &projection)
+		set_uniform(light_shader, "model", &light_model)
+		gl.BindVertexArray(light_VAO)
+		gl.DrawArrays(gl.TRIANGLES, 0, 36)
 
 		glfw.SwapBuffers(window)
 		glfw.PollEvents()
@@ -203,6 +208,7 @@ get_key_down :: proc(window: glfw.WindowHandle, key: i32) -> bool {
 }
 
 size_callback :: proc "c" (window: glfw.WindowHandle, width, height: i32) {
+	camera.aspect = f32(width) / f32(height)
 	gl.Viewport(0, 0, width, height)
 }
 

@@ -11,6 +11,7 @@ Camera :: struct {
 	fov: f32,
 	sens: f32,
 	speed: f32,
+	aspect: f32,
 }
 
 camera_movement :: proc(c: ^Camera, movement: Vec3) {
@@ -39,7 +40,7 @@ camera_view :: proc(c: Camera) -> Mat4 {
 
 camera_projection :: proc(c: Camera) -> Mat4 {
 	fov_rads := linalg.to_radians(c.fov)
-	return linalg.matrix4_perspective(fov_rads, 800.0/ 600.0, 0.1, 100.0)
+	return linalg.matrix4_perspective(fov_rads, c.aspect, 0.1, 100.0)
 }
 
 camera_direction :: proc(c: Camera) -> Vec3 {

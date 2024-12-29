@@ -1,5 +1,14 @@
 {
 	"folders":
 	[
+		{
+			"path": "."
+		},
+	],
+	"build_systems": [
+		{
+			"name": "Odin - Build & Run",
+			"cmd": ["odin", "run", "c:\\dev\\learnopengl_odin"],
+		}
 	]
 }
