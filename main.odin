@@ -216,6 +216,12 @@ process_input :: proc(window: glfw.WindowHandle, delta_time: f32) {
 	if get_key_down(window, glfw.KEY_D) {
 		camera_movement(&camera, camera_speed * camera_right)
 	}
+	if get_key_down(window, glfw.KEY_Q) {
+		camera_movement(&camera, -camera_speed * Vec3{0, 1, 0})
+	}
+	if get_key_down(window, glfw.KEY_E) {
+		camera_movement(&camera, camera_speed * Vec3{0, 1, 0})
+	}
 }
 
 get_key_down :: proc(window: glfw.WindowHandle, key: i32) -> bool {
