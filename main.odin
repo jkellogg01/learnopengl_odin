@@ -177,7 +177,7 @@ main :: proc () {
 		set_uniform(cube_shader, "material.ambient", Vec3{1, 0.5, 0.31})
 		set_uniform(cube_shader, "material.diffuse", Vec3{1, 0.5, 0.31})
 		set_uniform(cube_shader, "material.specular", Vec3{0.5, 0.5, 0.5})
-		set_uniform(cube_shader, "material.shininess", f32(32))
+		set_uniform(cube_shader, "material.shininess", 32)
 		set_uniform(cube_shader, "light.position", light_position)
 		set_uniform(cube_shader, "light.ambient", Vec3{0.2, 0.2, 0.2})
 		set_uniform(cube_shader, "light.diffuse", Vec3{0.5, 0.5, 0.5})

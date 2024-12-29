@@ -38,7 +38,7 @@ void main() {
 	vec3 view_dir = normalize(view_position - fragment_position);
 	vec3 reflect_dir = reflect(-light_dir, normal_dir);
 	float spec = pow(max(dot(view_dir, reflect_dir), 0.0), material.shininess);
-	vec3 specular = light.specular * (diff * material.specular);
+	vec3 specular = light.specular * (spec * material.specular);
 
 	vec3 result = ambient + diffuse + specular;
 	fragment_color = vec4(result, 1.0);
