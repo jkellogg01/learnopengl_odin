@@ -5,10 +5,13 @@
 			"path": "."
 		},
 	],
-	"build_systems": [
+	"build_systems":
+	[
 		{
 			"name": "Odin - Build & Run",
-			"cmd": ["odin", "run", "c:\\dev\\learnopengl_odin"],
+			"cmd": ["odin", "run", "$project_path"],
+			"working_dir": "$project_path",
+			"file_regex": "^(.+)\\((\\d+):(\\d+)\\) (.+)$"
 		}
 	]
 }
