@@ -6,6 +6,11 @@ get_uniform_location :: proc(program: u32, name: string) -> i32 {
 	return gl.GetUniformLocation(program, cstring(raw_data(name)))
 }
 
+set_uniform_int :: proc(program: u32, name: string, value: i32) {
+	loc := get_uniform_location(program, name)
+	gl.Uniform1i(loc, value)
+}
+
 set_uniform_float :: proc(program: u32, name: string, value: f32) {
 	loc := get_uniform_location(program, name)
 	gl.Uniform1f(loc, value)
@@ -27,6 +32,7 @@ set_uniform_vec3 :: proc(program: u32, name: string, value: Vec3) {
 }
 
 set_uniform :: proc{
+	set_uniform_int,
 	set_uniform_float,
 	set_uniform_mat3,
 	set_uniform_mat4,
