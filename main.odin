@@ -151,8 +151,10 @@ main :: proc () {
 	gl.BindBuffer(gl.ARRAY_BUFFER, 0)
 
 	diffuse_map := load_texture("textures/container2.png")
-	gl.ActiveTexture(gl.TEXTURE0)
-	gl.BindTexture(gl.TEXTURE_2D, diffuse_map)
+
+	specular_map := load_texture("textures/container2_specular.png")
+
+	gl.UseProgram(cube_shader)
 
 	cube_model := linalg.matrix4_translate(Vec3{0, 0, 0})
 
@@ -181,13 +183,20 @@ main :: proc () {
 		set_uniform(cube_shader, "model", &cube_model)
 		set_uniform(cube_shader, "normal_matrix", &cube_normal)
 		set_uniform(cube_shader, "view_position", camera.position)
-		set_uniform(cube_shader, "material.diffuse", i32(0))
-		set_uniform(cube_shader, "material.specular", Vec3{0.5, 0.5, 0.5})
-		set_uniform(cube_shader, "material.shininess", f32(32))
+		set_uniform_int(cube_shader, "material.diffuse", 0)
+		set_uniform_int(cube_shader, "material.specular", 1)
+		set_uniform_float(cube_shader, "material.shininess", 32)
 		set_uniform(cube_shader, "light.position", light_position)
 		set_uniform(cube_shader, "light.ambient", Vec3{0.2, 0.2, 0.2})
 		set_uniform(cube_shader, "light.diffuse", Vec3{0.5, 0.5, 0.5})
 		set_uniform(cube_shader, "light.specular", Vec3{1, 1, 1})
+
+		gl.ActiveTexture(gl.TEXTURE0)
+		gl.BindTexture(gl.TEXTURE_2D, diffuse_map)
+
+		gl.ActiveTexture(gl.TEXTURE1)
+		gl.BindTexture(gl.TEXTURE_2D, specular_map)
+
 		gl.BindVertexArray(cube_VAO)
 		gl.DrawArrays(gl.TRIANGLES, 0, 36)
 
