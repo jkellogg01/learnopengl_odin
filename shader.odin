@@ -11,12 +11,18 @@ set_uniform_mat4 :: proc(program: u32, name: string, value: ^Mat4) {
 	gl.UniformMatrix4fv(loc, 1, gl.FALSE, &value[0][0])
 }
 
+set_uniform_mat3 :: proc(program: u32, name: string, value: ^Mat3) {
+	loc := get_uniform_location(program, name)
+	gl.UniformMatrix3fv(loc, 1, gl.FALSE, &value[0][0])
+}
+
 set_uniform_vec3 :: proc(program: u32, name: string, value: Vec3) {
 	loc := get_uniform_location(program, name)
 	gl.Uniform3f(loc, value.x, value.y, value.z)
 }
 
 set_uniform :: proc{
+	set_uniform_mat3,
 	set_uniform_mat4,
 	set_uniform_vec3,
 }

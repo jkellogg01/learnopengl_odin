@@ -12,6 +12,7 @@ Vec2 :: [2]f32
 Vec3 :: [3]f32
 Vec4 :: [4]f32
 
+Mat3 :: matrix[3, 3]f32
 Mat4 :: matrix[4, 4]f32
 
 window_width: i32 = 800
@@ -145,6 +146,14 @@ main :: proc () {
 
 	gl.BindBuffer(gl.ARRAY_BUFFER, 0)
 
+
+	cube_model := linalg.matrix4_translate(Vec3{0, 0, 0})
+	
+	cube_normal := linalg.matrix3_from_matrix4(linalg.matrix4_inverse_transpose(cube_model))
+
+	light_model := linalg.matrix4_translate(light_position)
+	light_model *= linalg.matrix4_scale(Vec3 {0.2, 0.2, 0.2})
+
 	last_frame: f32
 	for !glfw.WindowShouldClose(window) {
 		current_frame := f32(glfw.GetTime())
@@ -153,11 +162,6 @@ main :: proc () {
 
 		view := camera_view(camera)
 		projection := camera_projection(camera)
-
-		cube_model := linalg.matrix4_translate(Vec3{0, 0, 0})
-
-		light_model := linalg.matrix4_translate(light_position)
-		light_model *= linalg.matrix4_scale(Vec3 {0.2, 0.2, 0.2})
 
 		// draw
 		gl.ClearColor(0.2, 0.3, 0.3, 1.0)
@@ -168,6 +172,7 @@ main :: proc () {
 		set_uniform(cube_shader, "view", &view)
 		set_uniform(cube_shader, "projection", &projection)
 		set_uniform(cube_shader, "model", &cube_model)
+		set_uniform(cube_shader, "normal_matrix", &cube_normal)
 		set_uniform(cube_shader, "object_color", Vec3{1, 0.5, 0.31})
 		set_uniform(cube_shader, "light_color", Vec3{1, 1, 1})
 		set_uniform(cube_shader, "light_position", light_position)
