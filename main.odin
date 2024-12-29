@@ -148,7 +148,7 @@ main :: proc () {
 
 
 	cube_model := linalg.matrix4_translate(Vec3{0, 0, 0})
-	
+
 	cube_normal := linalg.matrix3_from_matrix4(linalg.matrix4_inverse_transpose(cube_model))
 
 	light_model := linalg.matrix4_translate(light_position)
@@ -176,6 +176,7 @@ main :: proc () {
 		set_uniform(cube_shader, "object_color", Vec3{1, 0.5, 0.31})
 		set_uniform(cube_shader, "light_color", Vec3{1, 1, 1})
 		set_uniform(cube_shader, "light_position", light_position)
+		set_uniform(cube_shader, "view_position", camera.position)
 		gl.BindVertexArray(cube_VAO)
 		gl.DrawArrays(gl.TRIANGLES, 0, 36)
 
