@@ -124,6 +124,19 @@ main :: proc () {
 	    -0.5,  0.5, -0.5,  0.0,  1.0,  0.0,  0.0, 1.0,
 	}
 
+	cube_positions := [?]Vec3{
+	    Vec3{ 0.0, 0.0, 0.0 },
+	    Vec3{ 2.0, 5.0, -15.0 },
+	    Vec3{ -1.5, -2.2, -2.5 },
+	    Vec3{ -3.8, -2.0, -12.3 },
+	    Vec3{ 2.4, -0.4, -3.5 },
+	    Vec3{ -1.7, 3.0, -7.5 },
+	    Vec3{ 1.3, -2.0, -2.5 },
+	    Vec3{ 1.5, 2.0, -2.5 },
+	    Vec3{ 1.5, 0.2, -1.5 },
+	    Vec3{ -1.3, 1.0, -1.5 },
+	}
+
 	VBO, cube_VAO, light_VAO: u32
 	gl.GenVertexArrays(1, &cube_VAO)
 	gl.GenVertexArrays(1, &light_VAO)
@@ -156,10 +169,6 @@ main :: proc () {
 
 	gl.UseProgram(cube_shader)
 
-	cube_model := linalg.matrix4_translate(Vec3{0, 0, 0})
-
-	cube_normal := linalg.matrix3_from_matrix4(linalg.matrix4_inverse_transpose(cube_model))
-
 	light_model := linalg.matrix4_translate(light_position)
 	light_model *= linalg.matrix4_scale(Vec3 {0.2, 0.2, 0.2})
 
@@ -180,13 +189,11 @@ main :: proc () {
 		gl.UseProgram(cube_shader)
 		set_uniform(cube_shader, "view", &view)
 		set_uniform(cube_shader, "projection", &projection)
-		set_uniform(cube_shader, "model", &cube_model)
-		set_uniform(cube_shader, "normal_matrix", &cube_normal)
 		set_uniform(cube_shader, "view_position", camera.position)
 		set_uniform_int(cube_shader, "material.diffuse", 0)
 		set_uniform_int(cube_shader, "material.specular", 1)
 		set_uniform_float(cube_shader, "material.shininess", 32)
-		set_uniform(cube_shader, "light.position", light_position)
+		set_uniform(cube_shader, "light.direction", Vec3{-0.2, -1, -0.3})
 		set_uniform(cube_shader, "light.ambient", Vec3{0.2, 0.2, 0.2})
 		set_uniform(cube_shader, "light.diffuse", Vec3{0.5, 0.5, 0.5})
 		set_uniform(cube_shader, "light.specular", Vec3{1, 1, 1})
@@ -198,14 +205,26 @@ main :: proc () {
 		gl.BindTexture(gl.TEXTURE_2D, specular_map)
 
 		gl.BindVertexArray(cube_VAO)
-		gl.DrawArrays(gl.TRIANGLES, 0, 36)
+		for pos, i in cube_positions {
+			cube_model := linalg.matrix4_translate(pos)
+			angle: f32 = 20 * f32(i)
+			angle_rad := linalg.to_radians(angle)
+			cube_model *= linalg.matrix4_rotate(angle_rad, Vec3{1, 0.3, 0.5})
+			set_uniform(cube_shader, "model", &cube_model)
+			cube_normal := linalg.matrix3_from_matrix4(linalg.matrix4_inverse_transpose(cube_model))
+			set_uniform(cube_shader, "normal_matrix", &cube_normal)
 
+			gl.DrawArrays(gl.TRIANGLES, 0, 36)
+		}
+
+		/*
 		gl.UseProgram(light_shader)
 		set_uniform(light_shader, "view", &view)
 		set_uniform(light_shader, "projection", &projection)
 		set_uniform(light_shader, "model", &light_model)
 		gl.BindVertexArray(light_VAO)
 		gl.DrawArrays(gl.TRIANGLES, 0, 36)
+		*/
 
 		glfw.SwapBuffers(window)
 		glfw.PollEvents()
