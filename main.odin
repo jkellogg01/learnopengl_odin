@@ -196,18 +196,6 @@ main :: proc () {
 		set_uniform_int(cube_shader, "material.diffuse", 0)
 		set_uniform_int(cube_shader, "material.specular", 1)
 		set_uniform_float(cube_shader, "material.shininess", 32)
-		// set_uniform(cube_shader, "light.position", camera.position)
-		// set_uniform(cube_shader, "light.direction", camera_direction(camera))
-		// inner_cutoff_angle := linalg.to_radians(f32(12.5))
-		// set_uniform(cube_shader, "light.inner_cutoff", linalg.cos(inner_cutoff_angle))
-		// outer_cutoff_angle := linalg.to_radians(f32(17.5))
-		// set_uniform(cube_shader, "light.outer_cutoff", linalg.cos(outer_cutoff_angle))
-		// set_uniform(cube_shader, "light.ambient", Vec3{0.2, 0.2, 0.2})
-		// set_uniform(cube_shader, "light.diffuse", Vec3{0.5, 0.5, 0.5})
-		// set_uniform(cube_shader, "light.specular", Vec3{1, 1, 1})
-		// set_uniform_float(cube_shader, "light.constant", 1)
-		// set_uniform_float(cube_shader, "light.linear", 0.09)
-		// set_uniform_float(cube_shader, "light.quadratic", 0.032)
 
 		light_ambient := Vec3{0.2, 0.2, 0.2}
 		light_diffuse := Vec3{0.5, 0.5, 0.5}
@@ -228,6 +216,19 @@ main :: proc () {
 			set_uniform_float(cube_shader, fmt.aprintf(target, "linear"), 0.09)
 			set_uniform_float(cube_shader, fmt.aprintf(target, "quadratic"), 0.032)
 		}
+
+		set_uniform(cube_shader, "spot_light.position", camera.position)
+		set_uniform(cube_shader, "spot_light.direction", camera_direction(camera))
+		inner_cutoff_angle := linalg.to_radians(f32(12.5))
+		set_uniform(cube_shader, "spot_light.inner_cutoff", linalg.cos(inner_cutoff_angle))
+		outer_cutoff_angle := linalg.to_radians(f32(17.5))
+		set_uniform(cube_shader, "spot_light.outer_cutoff", linalg.cos(outer_cutoff_angle))
+		set_uniform(cube_shader, "spot_light.ambient", light_ambient)
+		set_uniform(cube_shader, "spot_light.diffuse", light_diffuse * 1.5)
+		set_uniform(cube_shader, "spot_light.specular", light_specular)
+		set_uniform_float(cube_shader, "spot_light.constant", 1)
+		set_uniform_float(cube_shader, "spot_light.linear", 0.09)
+		set_uniform_float(cube_shader, "spot_light.quadratic", 0.032)
 
 		gl.ActiveTexture(gl.TEXTURE0)
 		gl.BindTexture(gl.TEXTURE_2D, diffuse_map)
