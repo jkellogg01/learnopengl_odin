@@ -8,6 +8,8 @@ struct Material {
 
 struct Light {
 	vec3 position;
+	vec3 direction;
+	float cutoff;
 
 	vec3 ambient;
 	vec3 diffuse;
@@ -50,6 +52,11 @@ void main() {
 	ambient *= attenuation;
 	diffuse *= attenuation;
 	specular *= attenuation;
-	vec3 result = ambient + diffuse + specular;
-	fragment_color = vec4(result, 1.0);
+
+	float theta = dot(light_dir, normalize(-light.direction));
+	if (theta > light.cutoff) {
+		fragment_color = vec4(ambient + diffuse + specular, 1.0);
+	} else {
+		fragment_color = vec4(ambient, 1.0);
+	}
 }
