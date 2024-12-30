@@ -193,10 +193,13 @@ main :: proc () {
 		set_uniform_int(cube_shader, "material.diffuse", 0)
 		set_uniform_int(cube_shader, "material.specular", 1)
 		set_uniform_float(cube_shader, "material.shininess", 32)
-		set_uniform(cube_shader, "light.direction", Vec3{-0.2, -1, -0.3})
+		set_uniform(cube_shader, "light.position", light_position)
 		set_uniform(cube_shader, "light.ambient", Vec3{0.2, 0.2, 0.2})
 		set_uniform(cube_shader, "light.diffuse", Vec3{0.5, 0.5, 0.5})
 		set_uniform(cube_shader, "light.specular", Vec3{1, 1, 1})
+		set_uniform_float(cube_shader, "light.constant", 1)
+		set_uniform_float(cube_shader, "light.linear", 0.09)
+		set_uniform_float(cube_shader, "light.quadratic", 0.032)
 
 		gl.ActiveTexture(gl.TEXTURE0)
 		gl.BindTexture(gl.TEXTURE_2D, diffuse_map)
@@ -208,8 +211,7 @@ main :: proc () {
 		for pos, i in cube_positions {
 			cube_model := linalg.matrix4_translate(pos)
 			angle: f32 = 20 * f32(i)
-			angle_rad := linalg.to_radians(angle)
-			cube_model *= linalg.matrix4_rotate(angle_rad, Vec3{1, 0.3, 0.5})
+			cube_model *= linalg.matrix4_rotate(linalg.to_radians(angle), Vec3{1, 0.3, 0.5})
 			set_uniform(cube_shader, "model", &cube_model)
 			cube_normal := linalg.matrix3_from_matrix4(linalg.matrix4_inverse_transpose(cube_model))
 			set_uniform(cube_shader, "normal_matrix", &cube_normal)
@@ -217,14 +219,12 @@ main :: proc () {
 			gl.DrawArrays(gl.TRIANGLES, 0, 36)
 		}
 
-		/*
 		gl.UseProgram(light_shader)
 		set_uniform(light_shader, "view", &view)
 		set_uniform(light_shader, "projection", &projection)
 		set_uniform(light_shader, "model", &light_model)
 		gl.BindVertexArray(light_VAO)
 		gl.DrawArrays(gl.TRIANGLES, 0, 36)
-		*/
 
 		glfw.SwapBuffers(window)
 		glfw.PollEvents()
