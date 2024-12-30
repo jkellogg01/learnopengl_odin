@@ -30,8 +30,6 @@ camera := Camera {
 mouse_last_x := f32(window_width) / 2
 mouse_last_y := f32(window_height) / 2
 
-light_position := Vec3 {1.2, 1, 2}
-
 main :: proc () {
 	glfw.WindowHint(glfw.OPENGL_FORWARD_COMPAT, glfw.TRUE)
 	glfw.WindowHint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
@@ -137,6 +135,13 @@ main :: proc () {
 	    Vec3{ -1.3, 1.0, -1.5 },
 	}
 
+	light_positions := [?]Vec3{
+		Vec3{ 0.7,  0.2,  2.0},
+		Vec3{ 2.3, -3.3, -4.0},
+		Vec3{-4.0,  2.0, -12.0},
+		Vec3{ 0.0,  0.0, -3.0},
+	}
+
 	VBO, cube_VAO, light_VAO: u32
 	gl.GenVertexArrays(1, &cube_VAO)
 	gl.GenVertexArrays(1, &light_VAO)
@@ -169,8 +174,6 @@ main :: proc () {
 
 	gl.UseProgram(cube_shader)
 
-	light_model := linalg.matrix4_translate(light_position)
-	light_model *= linalg.matrix4_scale(Vec3 {0.2, 0.2, 0.2})
 
 	last_frame: f32
 	for !glfw.WindowShouldClose(window) {
@@ -193,18 +196,38 @@ main :: proc () {
 		set_uniform_int(cube_shader, "material.diffuse", 0)
 		set_uniform_int(cube_shader, "material.specular", 1)
 		set_uniform_float(cube_shader, "material.shininess", 32)
-		set_uniform(cube_shader, "light.position", camera.position)
-		set_uniform(cube_shader, "light.direction", camera_direction(camera))
-		inner_cutoff_angle := linalg.to_radians(f32(12.5))
-		set_uniform(cube_shader, "light.inner_cutoff", linalg.cos(inner_cutoff_angle))
-		outer_cutoff_angle := linalg.to_radians(f32(17.5))
-		set_uniform(cube_shader, "light.outer_cutoff", linalg.cos(outer_cutoff_angle))
-		set_uniform(cube_shader, "light.ambient", Vec3{0.2, 0.2, 0.2})
-		set_uniform(cube_shader, "light.diffuse", Vec3{0.5, 0.5, 0.5})
-		set_uniform(cube_shader, "light.specular", Vec3{1, 1, 1})
-		set_uniform_float(cube_shader, "light.constant", 1)
-		set_uniform_float(cube_shader, "light.linear", 0.09)
-		set_uniform_float(cube_shader, "light.quadratic", 0.032)
+		// set_uniform(cube_shader, "light.position", camera.position)
+		// set_uniform(cube_shader, "light.direction", camera_direction(camera))
+		// inner_cutoff_angle := linalg.to_radians(f32(12.5))
+		// set_uniform(cube_shader, "light.inner_cutoff", linalg.cos(inner_cutoff_angle))
+		// outer_cutoff_angle := linalg.to_radians(f32(17.5))
+		// set_uniform(cube_shader, "light.outer_cutoff", linalg.cos(outer_cutoff_angle))
+		// set_uniform(cube_shader, "light.ambient", Vec3{0.2, 0.2, 0.2})
+		// set_uniform(cube_shader, "light.diffuse", Vec3{0.5, 0.5, 0.5})
+		// set_uniform(cube_shader, "light.specular", Vec3{1, 1, 1})
+		// set_uniform_float(cube_shader, "light.constant", 1)
+		// set_uniform_float(cube_shader, "light.linear", 0.09)
+		// set_uniform_float(cube_shader, "light.quadratic", 0.032)
+
+		light_ambient := Vec3{0.2, 0.2, 0.2}
+		light_diffuse := Vec3{0.5, 0.5, 0.5}
+		light_specular := Vec3{1, 1, 1}
+
+		set_uniform(cube_shader, "dir_light.direction", -Vec3{0.2, 1, 0.3})
+		set_uniform(cube_shader, "dir_light.ambient", light_ambient)
+		set_uniform(cube_shader, "dir_light.diffuse", light_diffuse)
+		set_uniform(cube_shader, "dir_light.specular", light_specular)
+
+		for point, i in light_positions {
+			target := fmt.aprintf("point_lights[%d].%%s", i)
+			set_uniform(cube_shader, fmt.aprintf(target, "position"), point)
+			set_uniform(cube_shader, fmt.aprintf(target, "ambient"), light_ambient)
+			set_uniform(cube_shader, fmt.aprintf(target, "diffuse"), light_diffuse)
+			set_uniform(cube_shader, fmt.aprintf(target, "specular"), light_specular)
+			set_uniform_float(cube_shader, fmt.aprintf(target, "constant"), 1)
+			set_uniform_float(cube_shader, fmt.aprintf(target, "linear"), 0.09)
+			set_uniform_float(cube_shader, fmt.aprintf(target, "quadratic"), 0.032)
+		}
 
 		gl.ActiveTexture(gl.TEXTURE0)
 		gl.BindTexture(gl.TEXTURE_2D, diffuse_map)
@@ -224,12 +247,16 @@ main :: proc () {
 			gl.DrawArrays(gl.TRIANGLES, 0, 36)
 		}
 
-		// gl.UseProgram(light_shader)
-		// set_uniform(light_shader, "view", &view)
-		// set_uniform(light_shader, "projection", &projection)
-		// set_uniform(light_shader, "model", &light_model)
-		// gl.BindVertexArray(light_VAO)
-		// gl.DrawArrays(gl.TRIANGLES, 0, 36)
+		gl.UseProgram(light_shader)
+		set_uniform(light_shader, "view", &view)
+		set_uniform(light_shader, "projection", &projection)
+		gl.BindVertexArray(light_VAO)
+		for position in light_positions {
+			light_model := linalg.matrix4_translate(position)
+			light_model *= linalg.matrix4_scale(Vec3 {0.2, 0.2, 0.2})
+			set_uniform(light_shader, "model", &light_model)
+			gl.DrawArrays(gl.TRIANGLES, 0, 36)
+		}
 
 		glfw.SwapBuffers(window)
 		glfw.PollEvents()
